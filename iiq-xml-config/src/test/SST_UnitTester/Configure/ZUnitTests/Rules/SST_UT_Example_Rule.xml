@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Rule PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Rule name="SST UT Get Fullname Rule" language="beanshell">
+	<ReferencedRules>
+		<Reference class="sailpoint.object.Rule" name="Get-Fullname-Rule"/>
+	</ReferencedRules>
+	<Signature returnType="Map">
+		<Inputs>
+			<Argument name="argsFileName"/>
+			<Argument name="value1"/>
+			<Argument name="value2"/>
+			<Argument name="expectedResult"/>
+		</Inputs>
+    	<Returns/>
+	</Signature>
+	<Source>
+		<![CDATA[
+			import sailpoint.object.*;
+			import java.util.*;
+			
+			import org.apache.commons.logging.Log;
+			import org.apache.commons.logging.LogFactory;
+		
+			private static Log utlogger = LogFactory.getLog("rule.SST.UnitTest.RulesLibrary");
+			
+			utlogger.trace("Enter SST UTGet Fullname Rule");
+			
+			utlogger.trace("Have the input value1: " + value1);
+			utlogger.trace("Have the input value2: " + value2);
+
+			utlogger.trace("Have the expectedResult: " + expectedResult);
+
+			String returnVal = getFullname(value1, value2);
+			
+			utlogger.trace("Exit SST UT Get Fullname Rule: " + returnVal);
+			return returnVal;
+		]]>
+	</Source>
+</Rule>

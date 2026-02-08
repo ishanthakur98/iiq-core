@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- The parent module must be referenced -->
+    <parent>
+        <groupId>sailpoint</groupId>
+        <artifactId>iiq</artifactId>
+        <version>q.0</version>
+    </parent>
+
+    <artifactId>iiq-distribution</artifactId>
+	<packaging>pom</packaging>
+	<name>iiq-distribution</name>
+
+    <!-- Build profiles -->
+    <profiles>
+        <profile>
+            <id>env-sandbox</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <build.profile.id>env-sandbox</build.profile.id>
+            </properties>
+        </profile>
+        <profile>
+            <id>env-dev</id>
+            <properties>
+                <build.profile.id>env-dev</build.profile.id>
+            </properties>
+        </profile>
+    </profiles>
+
+
+   <dependencies>
+        <dependency>
+            <groupId>sailpoint</groupId>
+            <artifactId>iiq-webapp</artifactId>
+            <version>${IdentityIQ.Version}</version>
+	    <type>war</type>
+        </dependency>
+   </dependencies>
+
+    <!-- Plugins for build -->
+    <build>
+	<plugins>
+        <plugin>
+             <artifactId>maven-dependency-plugin</artifactId>
+             <executions>
+               <execution>
+                 <id>unpack</id>
+                 <phase>none</phase><!--set phase to package to enable-->
+                 <goals>
+                   <goal>unpack</goal>
+                 </goals>
+                 <configuration>
+                   <artifactItems>
+                     <artifactItem>
+                       <groupId>sailpoint</groupId>
+                       <artifactId>Accelerator-Pack</artifactId>
+                       <version>${Accelerator-Pack.Version}</version>
+                       <type>zip</type>
+                       <overWrite>false</overWrite>
+                       <outputDirectory>${project.basedir}/target/AcceleratorPack</outputDirectory>
+                       <includes>**/*</includes>
+                     </artifactItem>
+                   </artifactItems>
+                 </configuration>
+               </execution>
+             </executions>
+        </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <executions>
+             <execution>
+                <id>antrun1</id>
+                <phase>package</phase>
+                <configuration>
+                   <target>
+                     <taskdef name="build-init" classname="sailpoint.services.tools.ant.BuildInitTask">
+                        <classpath refid="maven.compile.classpath"/>
+                     </taskdef>
+                     <taskdef resource="net/sf/antcontrib/antlib.xml">
+                        <classpath refid="maven.compile.classpath"/>
+                     </taskdef>
+                    
+                     <!-- crate these empty folders and files just to construct init-all.xml based on setting -->
+                     <mkdir dir="${project.basedir}/build-config/config/temp"/>
+                     <mkdir dir="${project.basedir}/build-config/config/temp/patch"/>
+                     <touch file="${project.basedir}/build-config/config/temp/init.xml"/>
+                     <if>
+                        <contains string="${IdentityIQ.Version}" substring="p" />
+                        <then>
+                         <touch file="${project.basedir}/build-config/config/temp/patch/identityiq-${IdentityIQ.Version}-objects.xml"/>
+                         <touch file="${project.basedir}/build-config/config/temp/patch/identityiq-${IdentityIQ.Version}.xml"/>
+                        </then>
+                     </if>
+                     <touch file="${project.basedir}/build-config/config/temp/sp.init-custom.xml"/>
+                     <if>
+                        <equals arg1="${usingLcm}" arg2="true"/>
+                        <then>
+                          <echo message="Using LCM"/>
+                          <touch file="${project.basedir}/build-config/config/temp/init-lcm.xml"/>
+                        </then>
+                     </if>
+                     <if>
+                        <and>
+                            <equals arg1="${usingLcm}" arg2="true"/>
+                            <contains string="${IdentityIQ.Version}" substring="p" />
+                        </and>
+                        <then>
+                          <touch file="${project.basedir}/build-config/config/temp/patch/identityiq-lcm-${IdentityIQ.Version}-objects.xml"/>
+                          <touch file="${project.basedir}/build-config/config/temp/patch/identityiq-lcm-${IdentityIQ.Version}.xml"/>
+                        </then>
+                     </if>
+                     <if>
+                        <equals arg1="${usingAP}" arg2="true"/>
+                        <then>
+                            <echo message="Using Accelerator Pack"/>
+                            <touch file="${project.basedir}/build-config/config/temp/init-acceleratorpack.xml"/>
+                            <touch file="${project.basedir}/build-config/config/temp/init-acceleratorpack-BETA.xml"/>
+                        </then>
+                     </if>
+                     <if>
+                        <and>
+                            <equals arg1="${usingAP}" arg2="true"/>
+                            <contains string="${Accelerator-Pack.Version}" substring="p" />
+                        </and>
+                        <then>
+                           <touch file="${project.basedir}/build-config/config/temp/patch/identityiq-ap-${Accelerator-Pack.Version}.xml"/>
+                        </then>
+                     </if>
+                     <if>
+                        <equals arg1="${usingRapidSetup}" arg2="true"/>
+                        <then>
+                          <echo message="Using RapidSetup"/>
+                            <touch file="${project.basedir}/build-config/config/temp/init-rapidsetup.xml"/>
+                        </then>
+                     </if>
+                     <build-init initFile="${project.basedir}/build-config/config/init-all.xml">
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="init.xml"/>
+                        </fileset>
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="init-lcm.xml"/>
+                        </fileset>
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="patch/*.xml"/>
+                            <exclude name="patch/identityiq-ap-*.xml"/>
+                        </fileset>
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="sp.init-custom.xml"/>
+                        </fileset>
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="init-acceleratorpack.xml"/>
+                        </fileset>
+                         <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="init-acceleratorpack-BETA.xml"/>
+                        </fileset>
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="patch/identityiq-ap-*.xml"/>
+                        </fileset>
+                        <fileset dir="${project.basedir}/build-config/config/temp" >
+                            <include name="init-rapidsetup.xml"/>
+                        </fileset>
+                     </build-init>
+                     <delete dir="${project.basedir}/build-config/config/temp"/>
+                     <!-- Delete Accelerator Pack folder if not using AP, so that AP files will not be included when generating WAR file  -->
+                     <if>
+                         <equals arg1="${usingAP}" arg2="true"/>
+                         <then>
+                           <echo message="Using Accelerator Pack. Do nothing." />
+                         </then>
+                         <else>
+                           <echo message="Not using Accelerator Pack. Delete Accelerator Pack related folder and files" />
+                           <delete dir="${project.basedir}/target/AcceleratorPack"/>
+                         </else>
+                     </if>
+                   </target>
+                </configuration>
+                <goals>
+                   <goal>run</goal>
+                </goals>
+             </execution>
+          </executions>
+        </plugin>
+        <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.3.0</version>
+            <configuration>
+                <descriptors>
+                    <descriptor>build-config/assembly/bin.xml</descriptor>
+                </descriptors>
+            </configuration>
+            <executions>
+                <execution>
+                    <id>distro-assembly</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>single</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        	</plugins>
+    </build>
+
+</project>

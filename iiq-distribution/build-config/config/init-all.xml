@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE sailpoint PUBLIC 'sailpoint.dtd' 'sailpoint.dtd'>
+<sailpoint>
+  <ImportAction name='include' value='init.xml'/>
+  <ImportAction name='include' value='init-lcm.xml'/>
+  <ImportAction name='include' value='sp.init-custom.xml'/>
+  <ImportAction name='include' value='init-acceleratorpack.xml'/>
+  <ImportAction name='include' value='init-acceleratorpack-BETA.xml'/>
+</sailpoint>

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Map PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<Map>
+	<entry key="argsFileName" value="SST_UT_GetFullnameRule_Args1" />
+	<entry key="useCase" value="Simple Return Test Value" />
+   	
+   	<entry key="value1" value="Hello" />
+   	<entry key="value2" value="World" />
+  
+   	<entry key="expectedResult">
+   		<value>
+   			<String>Hello World</String>
+   		</value>
+   	</entry>
+</Map>

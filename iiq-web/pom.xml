@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- The parent module must be referenced -->
+    <parent>
+        <groupId>sailpoint</groupId>
+        <artifactId>iiq</artifactId>
+        <version>q.0</version>
+    </parent>
+
+    <artifactId>iiq-web</artifactId>
+
+    <!-- Build profiles -->
+    <profiles>
+        <profile>
+            <id>env-sandbox</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <build.profile.id>env-sandbox</build.profile.id>
+            </properties>
+        </profile>
+        <profile>
+            <id>env-dev</id>
+            <properties>
+                <build.profile.id>env-dev</build.profile.id>
+            </properties>
+        </profile>
+    </profiles>
+
+    <!-- Plugins for build -->
+    <build>
+        <plugins>
+           <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-dependency-plugin</artifactId>
+              <version>3.1.1</version>
+              <executions>
+                 <execution>
+                    <id>copy-dependencies</id>
+                    <phase>package</phase>
+                    <goals>
+                       <goal>copy-dependencies</goal>
+                    </goals>
+                    <configuration>
+                       <outputDirectory>${project.build.directory}/WEB-INF/lib</outputDirectory>
+                       <overWriteReleases>false</overWriteReleases>
+                       <overWriteSnapshots>true</overWriteSnapshots>
+                       <excludeTransitive>true</excludeTransitive>
+                       <includeScope>runtime</includeScope>
+                       <excludeArtifactIds>junit-helper,maven-build-helper,ant-contrib,air-pipeline-helper</excludeArtifactIds>
+                    </configuration>
+                 </execution>
+              </executions>
+            </plugin>
+	<plugin>
+            <groupId>sailpoint.pse.devsecops</groupId>
+            <artifactId>air-pipeline-helper</artifactId>
+            <version>1.0.0</version>
+            <executions>
+                <execution>
+                    <id>air-pipeline-helper</id>
+                    <phase>none</phase><!-- change to package to enable this -->
+                    <goals>
+                        <goal>air-pipeline-helper</goal>
+                    </goals>
+                </execution>
+            </executions>
+            <configuration>
+                    <configFilesPath>${project.basedir}/src/main/java</configFilesPath>
+                    <relativizePath>true</relativizePath>
+                    <isDebugMode>true</isDebugMode>
+                    <isIIQ>true</isIIQ>
+                    <isJava>true</isJava>
+                    <outputFile>${project.basedir}/target/airreportjava.txt</outputFile>
+                    <haltOnShowStopper>true</haltOnShowStopper>
+            </configuration>
+        </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>${project.basedir}/build-config/assembly/iiq-webapp-files.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>create-release</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
