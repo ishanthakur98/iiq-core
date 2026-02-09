@@ -156,7 +156,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           
-          git add environments/${{ steps.env.outputs.environment }}/values.yaml
+          git add manifests/07-iiq-statefulset.yaml
           
           git commit -m "🚀 Update ${{ steps.env.outputs.environment }} image to ${{ needs.build-and-push.outputs.image-tag }}
           
