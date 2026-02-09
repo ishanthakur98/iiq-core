@@ -1,0 +1,165 @@
+name: Build, Push, and Update CD
+
+on:
+  workflow_dispatch: 
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/iiq
+  CD_REPO: ishanthakur98/iiq-core-cd # ← Your CD repo
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: Configure Maven for GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+      
+      - name: Extract version from pom.xml
+        id: get_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+      
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},value=${{ steps.get_version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_version.outputs.version }}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Generate build info
+        id: build_info
+        run: |
+          echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "commit_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "commit_message=$(git log -1 --pretty=%B | head -n 1)" >> $GITHUB_OUTPUT
+
+  update-cd-repo:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "branch=main" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "branch=develop" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Checkout CD repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CD_REPO }}
+          token: ${{ secrets.CD_REPO_PAT }}  # ← Need to create this
+          ref: main
+      
+      - name: Update image tag in values file
+        run: |
+          ENV=${{ steps.env.outputs.environment }}
+          NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
+          
+          # Update the image tag in environment-specific values
+          sed -i "s|tag: .*|tag: \"$NEW_TAG\"|g" environments/$ENV/values.yaml
+          
+          # Also update in comments for tracking
+          echo "# Updated by CI on $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> environments/$ENV/values.yaml
+          echo "# Git SHA: ${{ github.sha }}" >> environments/$ENV/values.yaml
+      
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          
+          git add environments/${{ steps.env.outputs.environment }}/values.yaml
+          
+          git commit -m "🚀 Update ${{ steps.env.outputs.environment }} image to ${{ needs.build-and-push.outputs.image-tag }}
+          
+          Source: ${{ github.repository }}@${{ github.sha }}
+          Triggered by: ${{ github.actor }}
+          Workflow: ${{ github.workflow }}"
+          
+          git push origin main
+      
+      - name: Create deployment summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Deployment Update
+          
+          **Environment:** \`${{ steps.env.outputs.environment }}\`
+          **New Image Tag:** \`${{ needs.build-and-push.outputs.image-tag }}\`
+          **Image Digest:** \`${{ needs.build-and-push.outputs.image-digest }}\`
+          
+          ### Changes
+          - Updated \`environments/${{ steps.env.outputs.environment }}/values.yaml\`
+          - ArgoCD will auto-sync in ~3 minutes
+          
+          ### Links
+          - [CD Repository](https://github.com/${{ env.CD_REPO }})
+          - [ArgoCD Dashboard](https://argocd.example.com/applications/${{ steps.env.outputs.environment }}-iiq)
+          EOF
