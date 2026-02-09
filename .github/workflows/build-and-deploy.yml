@@ -6,7 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/iiq
-  CD_REPO: ishanthakur98/iiq-deployments
+  CD_REPO: ishanthakur98/iiq-core-cd
 
 jobs:
   build-and-push:
