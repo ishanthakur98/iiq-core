@@ -43,6 +43,16 @@
             </snapshots>
         </repository>
     </repositories>
+    <!-- ADD THIS: Plugin repositories -->
+    <pluginRepositories>
+        <pluginRepository>
+            <id>github</id>  <!-- ← Same ID as above -->
+            <url>https://maven.pkg.github.com/ishanthakur98/iiq-artifacts</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
   <dependencies>
     <dependency>
       <groupId>sailpoint</groupId>
