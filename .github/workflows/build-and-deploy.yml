@@ -145,11 +145,11 @@ jobs:
           NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
           
           # Update the image tag in environment-specific values
-          sed -i "s|tag: .*|tag: \"$NEW_TAG\"|g" environments/$ENV/values.yaml
+          sed -i "s|DOCKER_TAG|$NEW_TAG|g" manifests/07-iiq-statefulset.yaml
           
           # Also update in comments for tracking
-          echo "# Updated by CI on $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> environments/$ENV/values.yaml
-          echo "# Git SHA: ${{ github.sha }}" >> environments/$ENV/values.yaml
+          # echo "# Updated by CI on $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> environments/$ENV/values.yaml
+          # echo "# Git SHA: ${{ github.sha }}" >> environments/$ENV/values.yaml
       
       - name: Commit and push changes
         run: |
